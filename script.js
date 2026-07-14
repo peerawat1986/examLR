@@ -708,7 +708,8 @@ function startExam(examId) {
     studentAnswers = [];
     isCheatingHandled = false;
     cheatWarnings = 0;
-
+    examStartTime = Date.now(); // SET START TIME HERE
+    
     updatePendingExamSubmission();
     requestFullscreen();
     renderCurrentQuestion();
@@ -946,13 +947,17 @@ function backToStudentDashboard() {
 
 document.addEventListener("visibilitychange", function () {
     if (document.hidden && currentExamTaking && !document.getElementById('student-exam-taking').classList.contains('hidden')) {
-        handleCheatingAttempt('ตรวจพบการพับหน้าจอหรือเปลี่ยนแท็บ');
+        if (Date.now() - examStartTime > 3000) {
+            handleCheatingAttempt('ตรวจพบการพับหน้าจอหรือเปลี่ยนแท็บ');
+        }
     }
 });
 
 window.addEventListener("blur", function () {
     if (currentExamTaking && !document.getElementById('student-exam-taking').classList.contains('hidden')) {
-        handleCheatingAttempt('ตรวจพบการเปลี่ยนหน้าจอ');
+        if (Date.now() - examStartTime > 3000) {
+            handleCheatingAttempt('ตรวจพบการเปลี่ยนหน้าจอ');
+        }
     }
 });
 
@@ -960,7 +965,9 @@ window.addEventListener("blur", function () {
     document.addEventListener(eventName, function () {
         const isFull = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
         if (!isFull && currentExamTaking && !document.getElementById('student-exam-taking').classList.contains('hidden')) {
-            handleCheatingAttempt('ออกจากโหมดเต็มหน้าจอ หรือเปิดใช้งานแบ่งหน้าจอ');
+            if (Date.now() - examStartTime > 3000) {
+                handleCheatingAttempt('ออกจากโหมดเต็มหน้าจอ หรือเปิดใช้งานแบ่งหน้าจอ');
+            }
         }
     });
 });
@@ -969,15 +976,24 @@ window.addEventListener("resize", function () {
     if (currentExamTaking && !document.getElementById('student-exam-taking').classList.contains('hidden')) {
         const isFull = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
         if (!isFull) {
-            handleCheatingAttempt('ตรวจพบการแบ่งหน้าจอ (Split Screen) หรือการปรับขนาดหน้าต่าง');
+            if (Date.now() - examStartTime > 3000) {
+                handleCheatingAttempt('ตรวจพบการแบ่งหน้าจอ (Split Screen) หรือการปรับขนาดหน้าต่าง');
+            }
         }
     }
 });
 
+let examStartTime = 0; // Grace period tracking
 let lastTickTime = Date.now();
 setInterval(function () {
     const now = Date.now();
     if (currentExamTaking && !document.getElementById('student-exam-taking').classList.contains('hidden')) {
+        // Grace period of 3 seconds after starting the exam to allow fullscreen transitions
+        if (now - examStartTime < 3000) {
+            lastTickTime = now;
+            return;
+        }
+
         if (now - lastTickTime > 3500) {
             handleCheatingAttempt('ตรวจพบการพักหน้าจอ หรือสลับแท็บ (Tab Suspended)');
             lastTickTime = now;
