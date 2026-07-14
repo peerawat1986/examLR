@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <!-- Allow proper sizing for tablets but prevent zooming out -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบสอบออนไลน์ (Online Exam System)</title>
+    <meta name="description" content="A beautiful and modern online examination system for students and teachers.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS styles included via GAS Templating -->
+    <?!= include('Style'); ?>
+</head>
+
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p>กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <!-- Anti-Cheat Overlay -->
+    <div id="anti-cheat-overlay" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; padding: 2rem; backdrop-filter: blur(10px);">
+        <h1 style="font-size: 5rem; margin-bottom: 1rem;">⚠️</h1>
+        <h2 style="color: var(--danger); font-size: 2rem;">แจ้งเตือนการทำผิดกฎ!</h2>
+        <p id="anti-cheat-reason" style="font-size: 1.25rem; margin: 1rem 0; color: #fff;"></p>
+        <p style="color: var(--danger); margin-bottom: 2rem;">หากมีครั้งต่อไป ระบบจะ "บังคับส่งข้อสอบ" ทันที</p>
+        <button onclick="resumeExamAfterWarning()" class="btn-primary btn-lg shadow-glow">รับทราบ
+            และกลับไปทำข้อสอบต่อ</button>
+    </div>
+
+    <!-- Animated Background -->
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <div id="app">
+        <!-- Landing View -->
+        <div id="view-landing" class="view active">
+            <div class="glass-card text-center hero-card">
+                <div class="icon-wrapper">🎓</div>
+                <h1>ระบบสอบออนไลน์</h1>
+                <p class="subtitle">แพลตฟอร์มการสอบโรงเรียนบ้านม่วงพิทยาคม</p>
+                <p>กดเข้าสอบกรอกรหัสนักเรียน เพื่อเลือกรายวิชาที่สอบ</p>
+                <div style="margin-bottom: 2rem; width: 100%;">
+                    <button onclick="navigateTo('student')" class="btn-primary btn-lg"
+                        style="width: 100%; padding: 1.25rem; font-size: 1.25rem; justify-content: center;">
+                        <span class="emoji">👨‍🎓</span> นักเรียน (เข้าสอบ)
+                    </button>
+                </div>
+
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <button onclick="navigateTo('admin')" class="btn-text text-sm"
+                        style="color: var(--text-muted); opacity: 0.7;">
+                        สำหรับครูผู้สอน (จัดการข้อสอบ)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin View -->
+        <div id="view-admin" class="view hidden">
+            <header class="glass-header">
+                <div class="header-content">
+                    <h2>👩‍🏫 (Admin)ครูผู้สอน</h2>
+                    <button onclick="navigateTo('landing')" class="btn-text">← กลับหน้าแรก</button>
+                </div>
+            </header>
+            <main class="container">
+                <!-- Admin Login Phase -->
+                <div id="admin-login" class="glass-card slide-up hero-card text-center">
+                    <div class="card-header">
+                        <h3>เข้าสู่ระบบครูผู้สอน</h3>
+                        <p class="subtitle mt-2">กรุณาเข้าสู่ระบบเพื่อจัดการชุดข้อสอบ</p>
+                    </div>
+                    <form id="admin-login-form" onsubmit="handleAdminLogin(event)" class="mt-4">
+                        <div class="input-group" style="text-align: left;">
+                            <label for="admin-login-name">ชื่อครูผู้สอน</label>
+                            <select id="admin-login-name" required class="form-select">
+                                <option value="">-- กำลังโหลด... --</option>
+                            </select>
+                        </div>
+                        <div class="input-group mt-3" style="text-align: left;">
+                            <label for="admin-login-password">รหัสสร้าง และจัดการชุดข้อสอบ</label>
+                            <input type="password" id="admin-login-password" required placeholder="กรอกรหัสผ่าน..."
+                                style="width: 100%; padding: 0.875rem 1rem; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--surface-border); border-radius: 8px; color: white;">
+                        </div>
+                        <button type="submit" class="btn-primary btn-lg shadow-glow mt-4">🔐 เข้าสู่ระบบ</button>
+                    </form>
+                </div>
+
+                <!-- Admin Dashboard Phase -->
+                <div id="admin-dashboard" class="hidden">
+                    <div class="glass-card slide-up mb-4">
+                        <div class="card-header">
+                            <h3>ชุดข้อสอบทั้งหมดในระบบ</h3>
+                        </div>
+                        <div id="admin-exam-list" class="exam-list">
+                            <!-- Exam list dynamically generated -->
+                        </div>
+                    </div>
+
+                    <div class="glass-card slide-up mt-4">
+                        <div class="card-header">
+                            <h3>สร้างชุดข้อสอบใหม่</h3>
+                        </div>
+                        <form id="exam-form" onsubmit="handleCreateExam(event)">
+
+                            <div class="row-grid">
+                                <div class="input-group">
+                                    <label>ชื่อครูผู้สอน</label>
+                                    <div id="logged-in-teacher-name"
+                                        style="padding: 0.875rem 1rem; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--surface-border); border-radius: 8px; color: var(--text-muted);">
+                                        --
+                                    </div>
+                                    <input type="hidden" id="exam-teacher" value="">
+                                </div>
+                                <div class="input-group">
+                                    <label for="exam-subject">รายวิชา</label>
+                                    <select id="exam-subject" required class="form-select">
+                                        <option value="">-- เลือกวิชา --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="exam-title">ชื่อชุดข้อสอบ</label>
+                                <input type="text" id="exam-title" required placeholder="เช่น แบบทดสอบกลางภาค">
+                            </div>
+
+                            <div class="row-grid mt-3">
+                                <div class="input-group">
+                                    <label for="exam-start-time">เวลาเปิดสอบ (ปล่อยว่างถ้าให้สอบได้ตลอด)</label>
+                                    <input type="datetime-local" id="exam-start-time" class="form-select"
+                                        style="background: rgba(0,0,0,0.2); border: 1px solid var(--surface-border); padding: 0.875rem 1rem; border-radius: 8px; color: white; width: 100%;">
+                                </div>
+                                <div class="input-group">
+                                    <label for="exam-end-time">เวลาปิดรับข้อสอบ (ปล่อยว่างถ้าไม่มีกำหนด)</label>
+                                    <input type="datetime-local" id="exam-end-time" class="form-select"
+                                        style="background: rgba(0,0,0,0.2); border: 1px solid var(--surface-border); padding: 0.875rem 1rem; border-radius: 8px; color: white; width: 100%;">
+                                </div>
+                            </div>
+
+                            <!-- Hidden field for edit mode -->
+                            <input type="hidden" id="editing-exam-id" value="">
+
+                            <div style="display:flex; justify-content:flex-end; margin-bottom: 0.5rem;">
+                                <input type="file" id="csv-file-input" accept=".csv" class="hidden"
+                                    onchange="handleImportCSV(event)">
+                                <button type="button" class="btn-secondary text-sm"
+                                    onclick="document.getElementById('csv-file-input').click()">📂 นำเข้าข้อสอบจาก
+                                    CSV</button>
+                            </div>
+
+                            <div id="questions-container" class="questions-wrapper">
+                                <!-- Questions will be added here -->
+                            </div>
+
+                            <div class="mt-3"
+                                style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; position: sticky; bottom: 1rem; background: rgba(15, 23, 42, 0.95); padding: 1rem; border-radius: 12px; border: 1px solid var(--primary); box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 100;">
+                                <button type="button" onclick="addQuestionField()" class="btn-secondary">+
+                                    เพิ่มข้อสอบ</button>
+                                <div>
+                                    <button type="button" onclick="cancelEdit()" id="btn-cancel-edit"
+                                        class="btn-remove hidden">ยกเลิกการแก้ไข</button>
+                                    <button type="submit" class="btn-primary" id="btn-save-exam">💾
+                                        บันทึกชุดข้อสอบ</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div> <!-- End Admin Dashboard -->
+            </main>
+        </div>
+
+        <!-- Student View -->
+        <div id="view-student" class="view hidden">
+            <header class="glass-header">
+                <div class="header-content">
+                    <h2 id="student-dashboard-title">👨‍🎓 ระบบเข้าสอบนักเรียน</h2>
+                    <div id="student-exam-warning" class="hidden"
+                        style="color: var(--danger); font-size: 1rem; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        ⚠️ ห้ามสลับแท็บ ย่อจอ หรือแคปภาพเด็ดขาด!
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <span id="student-name-display" class="gradient-text hidden"></span>
+                        <button id="btn-student-back-home" onclick="navigateTo('landing')" class="btn-text">←
+                            กลับหน้าแรก</button>
+                    </div>
+                </div>
+            </header>
+            <main class="container">
+
+                <!-- Login Phase -->
+                <div id="student-login" class="glass-card slide-up hero-card text-center">
+                    <div class="card-header">
+                        <h3>เข้าสู่ระบบนักเรียน</h3>
+                        <p class="subtitle mt-2">กรุณากรอกรหัสนักเรียนของคุณเพื่อเข้าถึงแบบทดสอบ</p>
+                    </div>
+                    <form id="student-login-form" onsubmit="handleStudentLogin(event)" class="mt-4">
+                        <div class="input-group">
+                            <input type="text" id="student-code" required placeholder="รหัสนักเรียน 5 หลัก..."
+                                style="text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+                        </div>
+                        <button type="submit" class="btn-primary btn-lg shadow-glow">🔍 ตรวจสอบข้อมูล</button>
+                    </form>
+                </div>
+
+                <!-- Selection Phase -->
+                <div id="student-exam-selection" class="glass-card slide-up hidden">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <h3>เลือกชุดข้อสอบที่ต้องการทำ</h3>
+                        <div id="realtime-clock"
+                            style="font-family: monospace; font-size: 1.1rem; color: var(--primary); background: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--surface-border);">
+                            กำลังโหลดเวลา...
+                        </div>
+                    </div>
+                    <div id="student-exam-list" class="exam-list">
+                        <!-- Exam list dynamically generated -->
+                    </div>
+                </div>
+
+                <!-- Taking Exam Phase -->
+                <div id="student-exam-taking" class="glass-card hidden slide-up"
+                    style="user-select: none; -webkit-user-select: none;">
+                    <div class="exam-header row-between">
+                        <h3 id="taking-exam-title"></h3>
+                        <div style="display:flex; gap:1rem; align-items:center;">
+                            <span class="badge" id="question-count-badge"
+                                style="background:var(--primary); color:white;"></span>
+                            <span class="badge" id="timer-badge"
+                                style="background:var(--danger); color:white; font-family:monospace; font-size:1.2rem;">⏱️
+                                01:00</span>
+                        </div>
+                    </div>
+                    <form id="take-exam-form" onsubmit="handleNextOrSubmit(event)">
+                        <div id="taking-questions-container" class="exam-paper"
+                            style="min-height: 250px; display:flex; flex-direction:column; justify-content:center;">
+                            <!-- Question dynamically generated here -->
+                        </div>
+                        <div class="text-right mt-4">
+                            <button type="button" id="btn-next-question" onclick="handleNextOrSubmit()"
+                                class="btn-primary btn-lg shadow-glow">ถัดไป ➔</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Result Phase -->
+                <div id="student-exam-result" class="glass-card hidden text-center fade-in">
+                    <h3>ผลการทดสอบ</h3>
+                    <div class="score-circle-wrapper mt-4">
+                        <div class="score-circle">
+                            <span id="score-display">0/0</span>
+                        </div>
+                    </div>
+                    <h2 id="score-percentage" class="mt-3 gradient-text">0%</h2>
+                    <p id="score-message" class="subtitle mt-2"></p>
+                    <div class="mt-4">
+                        <button onclick="backToStudentDashboard()" class="btn-secondary">กลับหน้าหลัก</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript included via GAS Templating -->
+    <?!= include('JavaScript'); ?>
+</body>
+
+</html>
