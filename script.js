@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyePYHQdtm6mJaGTylCifA0Ng_Hxp1viws09311GIxedNwquIT7Fcbfpdb-ytvrbYcweg/exec"; // TODO: วาง URL ที่ได้จากขั้นตอน Deploy Google Apps Script
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwim-zIawKEQ_7Oh8bjJIMxhyfObInAXyX9F7TKp2kH7a7n07ChHGy8BqC3KpJ4GRSTXw/exec"; // TODO: วาง URL ที่ได้จากขั้นตอน Deploy Google Apps Script
 
 // App State
 let exams = [];
