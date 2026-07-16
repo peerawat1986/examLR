@@ -464,12 +464,16 @@ function deleteExam(id) {
 
 function renderAdminExamList() {
     const list = document.getElementById('admin-exam-list');
-    if (exams.length === 0) {
-        list.innerHTML = `<div class="empty-state">ยังไม่มีชุดข้อสอบในระบบ</div>`;
+    
+    // กรองเฉพาะข้อสอบที่เป็นของครูผู้สอนที่ Login อยู่
+    const myExams = exams.filter(exam => exam.title.includes(`(โดย ${currentAdmin})`));
+
+    if (myExams.length === 0) {
+        list.innerHTML = `<div class="empty-state">ยังไม่มีชุดข้อสอบของคุณในระบบ</div>`;
         return;
     }
 
-    list.innerHTML = exams.map(exam => {
+    list.innerHTML = myExams.map(exam => {
         let timeStr = '';
         if (exam.startTime || exam.endTime) {
             const start = exam.startTime ? new Date(exam.startTime).toLocaleString('th-TH') : 'ไม่กำหนด';
